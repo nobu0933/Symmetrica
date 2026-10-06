@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3c3e59">
+  <title>Symmetrica</title>
+  <link rel="stylesheet" href="style.css?v=20261007">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <main class="app" id="app">
+    <section class="game-screen" id="game-screen" aria-label="ゲーム画面">
+      <button class="stage-indicator bevel" id="stage-indicator" type="button" aria-label="ステージ選択を開く"><span>1/17</span></button>
+      <div class="placement-gauge" id="placement-gauge" role="progressbar" aria-label="図形の配置数" aria-valuemin="0" aria-valuenow="0" aria-valuemax="1"></div>
+      <div class="play-row">
+        <button class="stage-arrow previous" id="previous" type="button" aria-label="前のステージ"><svg viewBox="0 0 48 80" aria-hidden="true"><path d="M42 3 4 40l38 37z"/></svg></button>
+        <div class="board-frame" id="board-frame"><canvas id="board" width="600" height="600" aria-label="対称模様を配置する格子"></canvas></div>
+        <button class="stage-arrow next" id="next" type="button" aria-label="次のステージ"><svg viewBox="0 0 48 80" aria-hidden="true"><path d="m6 3 38 37L6 77z"/></svg></button>
+      </div>
+      <div class="controls" aria-label="配置操作">
+        <button class="icon-button bevel" id="reset" type="button" aria-label="すべてリセット" title="shortcut: R"><span class="control-icon" aria-hidden="true"></span></button>
+        <button class="icon-button bevel" id="undo" type="button" aria-label="1つ戻る" title="shortcut: B"><span class="control-icon" aria-hidden="true"></span></button>
+        <button class="icon-button bevel" id="change" type="button" aria-label="図形を切り替える" title="shortcut: C" hidden><span class="control-icon" aria-hidden="true"></span></button>
+        <button class="icon-button bevel" id="rotate" type="button" aria-label="回転" title="shortcut: N"><span class="control-icon" aria-hidden="true"></span></button>
+        <button class="icon-button bevel" id="flip" type="button" aria-label="反転" title="shortcut: M"><span class="control-icon" aria-hidden="true"></span></button>
+      </div>
+    </section>
+    <section class="stage-screen" id="stage-screen" aria-label="ステージ選択" tabindex="-1" hidden>
+      <div class="stage-grid" id="stage-grid" aria-label="17ステージ">
+        <h1 class="game-title"><span class="title-word">Symmetric<span class="title-last-letter">a<img id="title-crown" class="title-crown" src="assets/crown.svg" alt="" aria-hidden="true" hidden></span></span></h1>
+        <button class="world-switch previous-world" id="world-previous" type="button" aria-label="前の面へ" hidden>◀</button>
+        <button class="world-switch" id="world-next" type="button" aria-label="次の面へ" hidden>▶</button>
+        <div class="stage-meta"><button class="erase-button" id="erase-button" type="button" aria-label="Erase all progress" title="Erase all progress"><span class="control-icon" aria-hidden="true"></span></button><span class="developer-credit">Developed by Fermii</span></div>
+      </div>
+    </section>
+    <section class="developer-screen" id="developer-screen" aria-label="開発者用画面" hidden>
+      <header class="developer-header"><h2>STAGE EDITOR</h2><button type="button" class="bevel" id="developer-close"><span>×</span></button></header>
+      <div class="developer-main">
+        <aside class="developer-sidebar">
+          <div class="developer-world"><label>ワールド <select id="developer-world"></select></label><div class="developer-world-actions"><button type="button" id="developer-add-world">＋ ワールド</button><button type="button" id="developer-remove-world">－ 削除</button></div><label>背景色 <input id="developer-background" type="color"></label><label>図形・格子色 <input id="developer-foreground" type="color"></label><label>サブカラー <input id="developer-sub-color" type="color"></label><label>対称記号色 <input id="developer-symbol-color" type="color"></label><label>クリア演出色 <input id="developer-clear-color" type="color"></label></div>
+          <div class="developer-stage-list" id="developer-stage-list"></div>
+        </aside>
+        <div class="developer-fields">
+          <div class="developer-field-row"><label>平面群 <select id="developer-group"></select></label><button type="button" id="developer-clear-stage">クリア判定だけ消去（模様は保持）</button></div>
+          <fieldset><legend>初期角度候補</legend><div id="developer-angles" class="developer-options"></div></fieldset>
+          <div class="developer-field-row"><label>図形サイズ最小 (%) <input id="developer-min-size" type="number" min="5" max="100" step="1"></label><label>最大 (%) <input id="developer-max-size" type="number" min="5" max="100" step="1"></label></div>
+          <fieldset><legend>使用可能な操作・モード</legend><label><input id="developer-rotate" type="checkbox"> 回転</label><label><input id="developer-flip" type="checkbox"> 反転</label><label><input id="developer-double" type="checkbox"> ダブル</label><label><input id="developer-blind" type="checkbox"> ブラインド</label></fieldset>
+          <fieldset class="developer-symbol-field"><legend>表示する対称記号（盤面または一覧を左クリック）</legend><canvas id="developer-symbol-canvas" width="600" height="600" aria-label="対称記号の選択盤面"></canvas><div id="developer-symbol-list" class="developer-options"></div></fieldset>
+          <fieldset class="developer-clear-symbol-field"><legend>クリア後に追加する対称記号</legend><div id="developer-clear-symbol-list" class="developer-options"></div></fieldset>
+        </div>
+      </div>
+      <footer class="developer-footer"><button type="button" id="developer-export">設定をコードで出力</button><button type="button" id="developer-copy">コピー</button><button type="button" id="developer-reset">編集中の変更を破棄</button><span id="developer-status" role="status"></span><textarea id="developer-output" readonly spellcheck="false" aria-label="貼り付け用ステージ設定コード"></textarea></footer>
+    </section>
+    <div class="confirm-backdrop" id="confirm-backdrop" hidden>
+      <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <p id="confirm-title">Erase all stage progress? This cannot be undone.</p>
+        <div class="confirm-actions">
+          <button class="bevel" type="button" id="cancel-erase"><span>Cancel</span></button>
+          <button class="bevel" type="button" id="confirm-erase"><span>Erase</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="announcement" id="announcement" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

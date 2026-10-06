@@ -1,0 +1,9 @@
+{
+  "name": "symmetrica",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test"
+  }
+}
