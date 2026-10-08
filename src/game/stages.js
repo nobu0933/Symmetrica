@@ -224,7 +224,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p2',
 				symbols: [9],
-				clearSymbols: [],
+				clearSymbols: [5],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -332,7 +332,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'pg',
 				symbols: [2],
-				clearSymbols: [],
+				clearSymbols: [1, 3],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -344,7 +344,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'cm',
 				symbols: [2, 4, 5],
-				clearSymbols: [],
+				clearSymbols: [1, 3],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -452,7 +452,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p3',
 				symbols: [3],
-				clearSymbols: [1, 2],
+				clearSymbols: [1, 2, 5],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.5,
 				sizeMax: 0.6,
@@ -463,7 +463,7 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'p6',
-				symbols: [5, 10],
+				symbols: [5, 6, 10],
 				clearSymbols: [3],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.4,
@@ -547,8 +547,8 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'c2mm',
-				symbols: [13, 20, 21],
-				clearSymbols: [15, 18],
+				symbols: [15, 18, 20],
+				clearSymbols: [1, 5, 10],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -571,8 +571,8 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'p4mg',
-				symbols: [14, 16, 18],
-				clearSymbols: [5, 10, 11, 12, 13],
+				symbols: [10, 12, 14],
+				clearSymbols: [5, 11, 13],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -607,7 +607,7 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'p6mm',
-				symbols: [9, 22, 23],
+				symbols: [12, 13, 17],
 				clearSymbols: [3, 16, 24, 25],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.3,
@@ -656,7 +656,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p2',
 				symbols: [9],
-				clearSymbols: [],
+				clearSymbols: [1, 5, 6],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -680,7 +680,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'pg',
 				symbols: [2],
-				clearSymbols: [],
+				clearSymbols: [1, 3],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -692,7 +692,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p4',
 				symbols: [5],
-				clearSymbols: [],
+				clearSymbols: [1, 2, 3, 4],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -716,7 +716,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p2mm',
 				symbols: [11, 14],
-				clearSymbols: [],
+				clearSymbols: [1, 4, 5],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.3,
 				sizeMax: 0.4,
@@ -728,7 +728,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'pgg',
 				symbols: [6, 9],
-				clearSymbols: [],
+				clearSymbols: [1, 2, 3, 4],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -752,7 +752,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p2mg',
 				symbols: [10, 11, 13],
-				clearSymbols: [],
+				clearSymbols: [4, 5, 6],
 				initialAngles: [0, 180],
 				sizeMin: 0.4,
 				sizeMax: 0.5,
@@ -775,8 +775,8 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'c2mm',
-				symbols: [10, 14, 17],
-				clearSymbols: [13, 22, 23],
+				symbols: [10, 13, 14, 17],
+				clearSymbols: [5, 22, 23],
 				initialAngles: [0, 90, 180, 270],
 				sizeMin: 0.2,
 				sizeMax: 0.3,
@@ -812,7 +812,7 @@ export const STAGE_WORLDS = [
 			{
 				group: 'p3m1',
 				symbols: [5, 7],
-				clearSymbols: [1],
+				clearSymbols: [1, 6],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.3,
 				sizeMax: 0.4,
@@ -823,7 +823,7 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'p6mm',
-				symbols: [12, 13, 17],
+				symbols: [17, 22, 23],
 				clearSymbols: [1, 28, 29, 31, 32],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.2,

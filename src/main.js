@@ -104,6 +104,7 @@ let touchPadOffset = { x: 0, y: 0 };
 let touchHintTimer = 0;
 const placementFlashes = new Map();
 let placementFlashFrame = 0;
+let previewDrawFrame = 0;
 let extraSymbolAlpha = 0;
 let extraSymbolOffsets = null;
 let blindFrame = 0;
@@ -212,6 +213,8 @@ function startStage(index, preparedState = null) {
   if (index < 0 || index >= STAGES.length || busy ||
     !isWorldUnlocked(STAGES, records, STAGES[index].worldIndex)) return;
   saveCurrentState();
+  cancelAnimationFrame(previewDrawFrame);
+  previewDrawFrame = 0;
   releaseTouchGesture();
   clearPlacementFlashes();
   cancelAnimationFrame(blindFrame);
@@ -307,12 +310,37 @@ function drawCopies(ctx, item, data, hex, alpha = 1, fillColor = null) {
   }
 }
 
+const stageLayerCache = new Map();
+function stageLayers(stage) {
+  if (stageLayerCache.has(stage)) {
+    const layers = stageLayerCache.get(stage);
+    stageLayerCache.delete(stage);
+    stageLayerCache.set(stage, layers);
+    return layers;
+  }
+  const makeCanvas = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 600;
+    return canvas;
+  };
+  const gridLayer = makeCanvas();
+  drawGrid(gridLayer.getContext('2d'), stage.hex, true, stage.theme);
+  const symbolsLayer = makeCanvas();
+  drawSymmetryElements(symbolsLayer.getContext('2d'), stage.group, OFFSET, OFFSET, CELL,
+    { showProblem: true, rotation: true, mirror: true, glide: true },
+    stage.symbols, [], false, 1, stage.theme?.symbolColor || DEFAULT_SYMBOL_COLOR);
+  const layers = { grid: gridLayer, symbols: symbolsLayer };
+  stageLayerCache.set(stage, layers);
+  if (stageLayerCache.size > 4) stageLayerCache.delete(stageLayerCache.keys().next().value);
+  return layers;
+}
+
 function drawGrid(ctx, hex, showLattice = true, stageTheme = null) {
-  const theme = getComputedStyle(document.documentElement);
-  ctx.fillStyle = stageTheme?.background || theme.getPropertyValue('--board').trim() || '#3c3e59';
+  const theme = stageTheme ? null : getComputedStyle(document.documentElement);
+  ctx.fillStyle = stageTheme?.background || theme?.getPropertyValue('--board').trim() || '#3c3e59';
   ctx.fillRect(0, 0, 600, 600);
   if (!showLattice) return;
-  ctx.strokeStyle = stageTheme?.foreground || theme.getPropertyValue('--grid').trim() || '#f0f2f5';
+  ctx.strokeStyle = stageTheme?.foreground || theme?.getPropertyValue('--grid').trim() || '#f0f2f5';
   ctx.globalAlpha = .28;
   ctx.lineWidth = 1.4;
   if (hex) {
@@ -339,7 +367,7 @@ function drawGrid(ctx, hex, showLattice = true, stageTheme = null) {
     }
   }
   ctx.globalAlpha = .65;
-  ctx.strokeStyle = stageTheme?.foreground || theme.getPropertyValue('--grid').trim() || '#f0f2f5';
+  ctx.strokeStyle = stageTheme?.foreground || theme?.getPropertyValue('--grid').trim() || '#f0f2f5';
   ctx.lineWidth = 2;
   if (!hex) ctx.strokeRect(OFFSET, OFFSET, CELL, CELL);
   else {
@@ -376,7 +404,8 @@ function animateBlindFade() {
 }
 
 function drawScene(ctx, data, { symbols = true, preview = false, lattice = true, addedAlpha = 0, addedOffsets = null, flashes = null } = {}) {
-  drawGrid(ctx, data.stage.hex, lattice, data.stage.theme);
+  if (lattice) ctx.drawImage(stageLayers(data.stage).grid, 0, 0);
+  else drawGrid(ctx, data.stage.hex, false, data.stage.theme);
   const now = flashes?.size ? performance.now() : 0;
   data.placed.forEach((item, index) => {
     const alpha = blindPlacementAlpha(data, index);
@@ -386,9 +415,7 @@ function drawScene(ctx, data, { symbols = true, preview = false, lattice = true,
     if (alpha > 0) drawCopies(ctx, item, data, data.stage.hex, alpha, color);
   });
   if (symbols) {
-    drawSymmetryElements(ctx, data.stage.group, OFFSET, OFFSET, CELL,
-      { showProblem: true, rotation: true, mirror: true, glide: true },
-      data.stage.symbols, [], false, 1, data.stage.theme?.symbolColor || DEFAULT_SYMBOL_COLOR);
+    ctx.drawImage(stageLayers(data.stage).symbols, 0, 0);
     if (addedAlpha > 0 && data.stage.clearSymbols?.length) {
       const visibleIds = addedOffsets
         ? data.stage.clearSymbols.filter((id) => Object.hasOwn(addedOffsets, id))
@@ -406,15 +433,22 @@ function drawScene(ctx, data, { symbols = true, preview = false, lattice = true,
   }
 }
 
+let lastTouchPadState = null;
+let lastTouchPadKey = '';
 function drawTouchPadShape() {
   if (!mobileLayout.matches || !state) return;
-  const ctx = touchPadShape.getContext('2d');
-  ctx.clearRect(0, 0, touchPadShape.width, touchPadShape.height);
   const initialCount = state.stage.doubleMode ? 2 : 1;
   const shapeIndex = state.stage.doubleMode
     ? (state.placed.length < initialCount ? state.placed.length : state.activeShape) : 0;
   const cursor = state.stage.doubleMode ? state.cursors[shapeIndex] : state.cursor;
   if (!cursor) return;
+  const shape = state.shapes?.[shapeIndex] || state;
+  const key = `${shapeIndex}:${shape.type}:${shape.size}:${cursor.angle}:${cursor.flipped}:${touchPadOffset.x}:${touchPadOffset.y}`;
+  if (lastTouchPadState === state && lastTouchPadKey === key) return;
+  lastTouchPadState = state;
+  lastTouchPadKey = key;
+  const ctx = touchPadShape.getContext('2d');
+  ctx.clearRect(0, 0, touchPadShape.width, touchPadShape.height);
   ctx.save();
   ctx.translate(
     326 + touchPadOffset.x * touchPadShape.width / touchPad.clientWidth,
@@ -425,11 +459,39 @@ function drawTouchPadShape() {
   ctx.restore();
 }
 
+const liveSceneCanvas = document.createElement('canvas');
+liveSceneCanvas.width = liveSceneCanvas.height = 600;
+const liveSceneContext = liveSceneCanvas.getContext('2d');
+let liveSceneKey = null;
 function draw() {
   if (!state) return;
-  drawScene(context, state, { preview: !menuOpen, addedAlpha: extraSymbolAlpha,
-    addedOffsets: extraSymbolOffsets, flashes: placementFlashes });
+  const cacheable = !placementFlashes.size && !extraSymbolOffsets &&
+    !(state.stage.blindMode && state.mode === 'play');
+  if (cacheable) {
+    const key = JSON.stringify([state.stage.key, state.mode, state.shapes, state.placed, extraSymbolAlpha]);
+    if (key !== liveSceneKey) {
+      drawScene(liveSceneContext, state, { addedAlpha: extraSymbolAlpha });
+      liveSceneKey = key;
+    }
+    context.drawImage(liveSceneCanvas, 0, 0);
+  } else {
+    liveSceneKey = null;
+    drawScene(context, state, { addedAlpha: extraSymbolAlpha,
+      addedOffsets: extraSymbolOffsets, flashes: placementFlashes });
+  }
+  if (!menuOpen && mouse.visible && state.mode === 'play') {
+    const candidate = getPreview();
+    drawShape(context, candidate.x, candidate.y, candidate, state, .55);
+  }
   drawTouchPadShape();
+}
+
+function queuePreviewDraw() {
+  if (previewDrawFrame) return;
+  previewDrawFrame = requestAnimationFrame(() => {
+    previewDrawFrame = 0;
+    if (!busy && !menuOpen) draw();
+  });
 }
 
 function clearPlacementFlashes() {
@@ -570,7 +632,7 @@ function moveTouchGesture(event) {
   touchPadOffset = { x: knobX, y: knobY };
   touchKnob.style.setProperty('--knob-x', `${knobX}px`);
   touchKnob.style.setProperty('--knob-y', `${knobY}px`);
-  draw();
+  queuePreviewDraw();
   maybeAutoPlaceTouch();
 }
 
@@ -713,6 +775,8 @@ async function openMenu() {
   if (busy || menuOpen) return;
   sounds.play('switch');
   busy = true;
+  cancelAnimationFrame(previewDrawFrame);
+  previewDrawFrame = 0;
   hideTouchGuidance();
   releaseTouchGesture();
   mouse.visible = false;
@@ -937,6 +1001,8 @@ function showInitialMenu() {
 
 async function completeStage(lastPlacementFlash = Promise.resolve()) {
   busy = true;
+  cancelAnimationFrame(previewDrawFrame);
+  previewDrawFrame = 0;
   hideTouchGuidance();
   releaseTouchGesture();
   clearAnimationActive = true;
@@ -1087,7 +1153,7 @@ const developerSequence = createSecretSequence('kaihatusha');
 function movePreview(event) {
   if (mobileLayout.matches || state.mode !== 'play' || menuOpen || busy) return;
   mouse = { ...boardPoint(event), visible: true, onBoard: true };
-  draw();
+  queuePreviewDraw();
 }
 board.addEventListener('pointerenter', movePreview);
 board.addEventListener('pointermove', movePreview);
@@ -1149,11 +1215,30 @@ touchPad.addEventListener('pointercancel', (event) => {
     scheduleTouchGuidance();
   }
 });
-controls.reset.addEventListener('click', resetStage);
-controls.undo.addEventListener('click', undo);
-controls.change.addEventListener('click', changeShape);
-controls.rotate.addEventListener('click', rotate);
-controls.flip.addEventListener('click', flip);
+function bindControlAction(control, action) {
+  let handledSecondTouch = false;
+  control.addEventListener('pointerdown', (event) => {
+    if (!mobileLayout.matches || !touchGesture || event.pointerType !== 'touch') return;
+    event.preventDefault();
+    handledSecondTouch = true;
+    action();
+  });
+  control.addEventListener('click', (event) => {
+    if (handledSecondTouch) {
+      handledSecondTouch = false;
+      event.preventDefault();
+      return;
+    }
+    action();
+  });
+  control.addEventListener('pointerup', () => setTimeout(() => { handledSecondTouch = false; }, 0));
+  control.addEventListener('pointercancel', () => { handledSecondTouch = false; });
+}
+bindControlAction(controls.reset, resetStage);
+bindControlAction(controls.undo, undo);
+bindControlAction(controls.change, changeShape);
+bindControlAction(controls.rotate, rotate);
+bindControlAction(controls.flip, flip);
 controls.previous.addEventListener('click', () => {
   if (busy || controls.previous.disabled) return;
   sounds.play('switch');
@@ -1186,17 +1271,8 @@ document.getElementById('confirm-erase').addEventListener('click', () => {
   document.getElementById('confirm-backdrop').hidden = true;
   stageIndex = 0;
   menuWorldIndex = 0;
-  state = newState(stageIndex);
-  introP1 = state.firstAttempt;
-  applyTheme(state.stage);
-  extraSymbolAlpha = 0;
-  extraSymbolOffsets = null;
-  frame.classList.remove('cleared');
-  delete frame.dataset.clearPhase;
-  saveCurrentState();
-  updateStageIndicator();
-  updateMenu(); updateControls(); updateGauge(); draw();
-  document.getElementById('erase-button').focus();
+  state = undefined; // Do not save the previously selected stage into the cleared records.
+  startStage(0);
 });
 document.addEventListener('keydown', (event) => {
   if (menuOpen) {

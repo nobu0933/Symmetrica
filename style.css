@@ -68,7 +68,8 @@ button:disabled {
 .stage-indicator {
 	position: absolute;
 	top: 31px;
-	right: 37px;
+	left: 50%;
+	margin-left: -90px;
 	width: 180px;
 	height: 70px;
 	padding: 0 10px;
@@ -148,6 +149,7 @@ button:disabled {
 }
 .stage-indicator.multi-world {
 	width: 225px;
+	margin-left: -112.5px;
 	font-size: 40px;
 }
 .placement-gauge {
@@ -237,15 +239,10 @@ button:disabled {
 .play-row {
 	position: absolute;
 	top: 137px;
-	left: 37px;
-	width: 1006px;
-	display: grid;
-	grid-template-columns: 80px 806px 80px;
-	gap: 20px;
-	align-items: center;
+	left: 137px;
+	width: 806px;
 }
 .board-frame {
-	grid-column: 2;
 	width: 806px;
 	height: 806px;
 	border: 16px solid var(--rim);
@@ -287,6 +284,10 @@ button:disabled {
 	display: none;
 }
 .stage-arrow {
+	position: absolute;
+	top: -106px;
+	width: 80px;
+	height: 70px;
 	border: 0;
 	background: transparent;
 	color: var(--rim);
@@ -297,10 +298,10 @@ button:disabled {
 	justify-content: center;
 }
 .stage-arrow.previous {
-	grid-column: 1;
+	left: 193px;
 }
 .stage-arrow.next {
-	grid-column: 3;
+	right: 193px;
 }
 .stage-arrow {
 	transition:
@@ -308,8 +309,8 @@ button:disabled {
 		transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .stage-arrow svg {
-	width: 46px;
-	height: 80px;
+	width: 40px;
+	height: 68px;
 	fill: currentColor;
 }
 .stage-arrow:not(:disabled):hover {
@@ -884,6 +885,12 @@ button:disabled {
 /* The portrait play surface is opt-in for touch-first, phone-sized screens.
    A narrow desktop window keeps the original square layout. */
 @media (hover: none) and (pointer: coarse) and (max-width: 950px) {
+	html,
+	body,
+	.app {
+		touch-action: none;
+		overscroll-behavior: none;
+	}
 	.game-screen.menu-covered {
 		visibility: hidden;
 	}
@@ -893,35 +900,45 @@ button:disabled {
 		transform: translate(-50%, -50%) scale(var(--game-scale));
 	}
 	.stage-indicator {
-		top: 122px;
-		right: 83px;
+		top: 110px;
+		margin-left: -129px;
 		width: 258px;
 		height: 70px;
 		font-size: 62px;
 	}
 	.stage-indicator.multi-world {
+		margin-left: -145px;
 		width: 290px;
 		font-size: 57px;
 	}
 	.placement-gauge {
-		left: 143px;
-		top: 222px;
-		width: 786px;
+		left: 130px;
+		top: 200px;
+		width: 820px;
 	}
 	.play-row {
-		left: 44px;
-		top: 251px;
-		width: 984px;
-		grid-template-columns: 78px 786px 78px;
-		gap: 21px;
+		left: 130px;
+		top: 230px;
+		width: 820px;
 	}
 	.board-frame {
-		width: 786px;
-		height: 786px;
+		width: 820px;
+		height: 820px;
+	}
+	.stage-arrow {
+		top: -120px;
+		width: 100px;
+		height: 80px;
+	}
+	.stage-arrow.previous {
+		left: 150px;
+	}
+	.stage-arrow.next {
+		right: 150px;
 	}
 	.stage-arrow svg {
-		width: 60px;
-		height: 104px;
+		width: 58px;
+		height: 78px;
 	}
 	#board {
 		pointer-events: none;
