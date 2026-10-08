@@ -54,6 +54,15 @@ button:disabled {
 	overflow: hidden;
 }
 .game-screen,
+.game-screen *,
+.stage-screen,
+.stage-screen *,
+.confirm-backdrop,
+.confirm-backdrop * {
+	-webkit-user-select: none;
+	user-select: none;
+}
+.game-screen,
 .stage-screen,
 .developer-screen,
 .confirm-backdrop {
@@ -141,11 +150,25 @@ button:disabled {
 .bevel.undo-correction:not(:disabled):hover {
 	--outline: var(--clear-color);
 }
+.icon-button.bevel.tutorial-highlight::after {
+	inset: 8px;
+	--inner-cut: calc(var(--cut) - 5px);
+}
 .bevel:not(:disabled):active {
 	transform: translateY(3px);
 }
 .stage-indicator.bevel {
 	position: absolute;
+}
+.stage-indicator.press-flash::after {
+	animation: control-face-flash 0.24s ease-out both;
+}
+.stage-indicator.press-flash > span {
+	animation: stage-indicator-text-flash 0.24s ease-out both;
+}
+@keyframes stage-indicator-text-flash {
+	0%, 58% { color: var(--background); }
+	100% { color: inherit; }
 }
 .stage-indicator.multi-world {
 	width: 225px;
@@ -311,18 +334,41 @@ button:disabled {
 .stage-arrow svg {
 	width: 40px;
 	height: 68px;
-	fill: currentColor;
+	fill: var(--background);
+	stroke: var(--rim);
+	stroke-width: 4px;
+	stroke-linejoin: round;
+	transition: fill 0.18s ease-out;
 }
 .stage-arrow:not(:disabled):hover {
 	color: var(--ink);
 	transform: scale(1.08);
 }
+.stage-arrow:not(:disabled):hover svg {
+	fill: color-mix(in srgb, var(--background) 75%, var(--ink) 25%);
+}
 .stage-arrow:not(:disabled):active {
 	color: var(--ink);
+}
+.stage-arrow:not(:disabled):active svg {
+	fill: var(--ink);
+}
+.stage-arrow.press-flash svg {
+	animation: stage-arrow-fill-flash 0.24s ease-out both;
+}
+.stage-arrow.press-flash:disabled {
+	opacity: 1;
+}
+@keyframes stage-arrow-fill-flash {
+	0%, 58% { fill: var(--ink); }
+	100% { fill: var(--background); }
 }
 .stage-arrow:focus-visible {
 	outline: none;
 	color: var(--selection);
+}
+.stage-arrow:focus-visible svg {
+	stroke: var(--selection);
 }
 .controls {
 	position: absolute;
@@ -347,6 +393,23 @@ button:disabled {
 	mask-position: center;
 	mask-repeat: no-repeat;
 	mask-size: contain;
+}
+.icon-button.press-flash::after {
+	animation: control-face-flash 0.24s ease-out both;
+}
+.icon-button.press-flash .control-icon {
+	animation: control-icon-flash 0.24s ease-out both;
+}
+.icon-button.press-flash:disabled {
+	opacity: 1;
+}
+@keyframes control-face-flash {
+	0%, 58% { background: var(--ink); }
+	100% { background: var(--background); }
+}
+@keyframes control-icon-flash {
+	0%, 58% { background: var(--background); }
+	100% { background: var(--ink); }
 }
 #reset .control-icon,
 .erase-button .control-icon {
@@ -451,6 +514,8 @@ button:disabled {
 	grid-column: 4;
 	align-self: stretch;
 	justify-self: stretch;
+	display: grid;
+	place-items: center;
 	border: 0;
 	padding: 0;
 	background: transparent;
@@ -460,6 +525,38 @@ button:disabled {
 	transition:
 		color 0.3s ease-out,
 		transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.world-switch svg {
+	width: 48px;
+	height: 80px;
+	fill: var(--background);
+	stroke: var(--rim);
+	stroke-width: 4px;
+	stroke-linejoin: round;
+	transition: fill 0.18s ease-out;
+}
+.world-switch:not(:disabled):hover svg {
+	fill: color-mix(in srgb, var(--background) 75%, var(--ink) 25%);
+}
+.world-switch:not(:disabled):active svg {
+	fill: var(--ink);
+}
+.world-switch.press-flash svg {
+	animation: stage-arrow-fill-flash 0.24s ease-out both;
+}
+.world-switch-placeholder {
+	color: rgba(0, 0, 0, 0.48);
+	pointer-events: none;
+	transition: none;
+}
+.world-switch-placeholder svg {
+	fill: currentColor;
+	stroke: currentColor;
+	transition: none;
+}
+#world-next {
+	position: relative;
+	z-index: 1;
 }
 .world-switch.previous-world {
 	grid-column: 2;
@@ -475,9 +572,17 @@ button:disabled {
 	outline: none;
 	color: var(--selection);
 }
+.world-switch:focus-visible svg {
+	stroke: var(--selection);
+}
 .world-switch.unlock-green,
 .world-switch.unlock-green:hover {
 	color: var(--clear-color);
+}
+.world-switch.unlock-green svg,
+.world-switch.unlock-green:hover svg {
+	fill: var(--clear-color);
+	stroke: var(--clear-color);
 }
 .world-switch.unlock-entering {
 	animation: menu-drop 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -494,6 +599,69 @@ button:disabled {
 	letter-spacing: 0.1em;
 	color: #f0f2f5;
 	white-space: nowrap;
+}
+.world-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 320px;
+	height: 64px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.world-progress-dot {
+	position: relative;
+	width: var(--dot-hit-size, 40px);
+	height: 64px;
+	flex: none;
+	border: 0;
+	padding: 0;
+	background: transparent;
+	appearance: none;
+	cursor: pointer;
+}
+.world-progress-dot::before {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: var(--dot-size, 10px);
+	height: var(--dot-size, 10px);
+	border-radius: 50%;
+	background: var(--rim);
+	transform: translate(-50%, -50%);
+	transition:
+		background-color 0.35s ease-out,
+		width 0.25s ease-out,
+		height 0.25s ease-out,
+		transform 0.18s ease-out;
+}
+.world-progress-dot.current::before {
+	width: var(--active-dot-size, 15px);
+	height: var(--active-dot-size, 15px);
+}
+.world-progress-dot.locked::before {
+	background: rgba(0, 0, 0, 0.48);
+}
+.world-progress-dot:disabled {
+	opacity: 1;
+	cursor: default;
+}
+.world-progress-dot:not(:disabled):hover::before {
+	background: var(--ink);
+	transform: translate(-50%, -50%) scale(1.15);
+}
+.world-progress-dot:focus-visible {
+	outline: none;
+}
+.world-progress-dot:focus-visible::before {
+	outline: 3px solid var(--selection);
+	outline-offset: 5px;
+}
+.world-progress.unlock-entering .world-progress-dot {
+	animation: menu-drop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+	animation-delay: var(--dot-arrival-delay, 0ms);
 }
 .title-word {
 	display: inline-block;
@@ -769,8 +937,12 @@ button:disabled {
 }
 .stage-screen.menu-revealing
 	.stage-grid
-	> :not(.stage-tile):not(.arrival-target):not(.game-title):not(.world-switch) {
+	> :not(.stage-tile):not(.arrival-target):not(.game-title):not(.world-switch):not(.world-progress) {
 	animation: menu-drop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.stage-screen.menu-revealing .world-progress:not([hidden]) .world-progress-dot {
+	animation: menu-drop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+	animation-delay: var(--dot-arrival-delay, 0ms);
 }
 .stage-screen.menu-revealing .stage-grid > .stage-tile:not(.arrival-target) {
 	animation: menu-drop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -833,25 +1005,26 @@ button:disabled {
 	background: var(--background);
 }
 .confirm-dialog {
-	width: 420px;
-	padding: 26px;
-	border: 5px solid var(--rim);
+	width: 720px;
+	padding: 42px;
+	border: 6px solid var(--rim);
 	background: var(--background);
-	line-height: 1.7;
-	font-size: 18px;
+	line-height: 1.45;
+	font-size: 32px;
 	overflow-wrap: anywhere;
 }
 .confirm-dialog p {
-	margin: 0 0 20px;
+	margin: 0 0 34px;
 }
 .confirm-actions {
 	display: flex;
-	gap: 12px;
+	gap: 20px;
 	justify-content: flex-end;
 }
 .confirm-actions button {
 	color: var(--ink);
-	padding: 12px 18px;
+	padding: 20px 30px;
+	font-size: 30px;
 	white-space: nowrap;
 }
 #confirm-erase {
@@ -874,6 +1047,30 @@ button:disabled {
 	}
 }
 @media (prefers-reduced-motion: reduce) {
+	.icon-button.press-flash::after {
+		animation: none !important;
+		background: var(--ink);
+	}
+	.icon-button.press-flash .control-icon {
+		animation: none !important;
+		background: var(--background);
+	}
+	.stage-indicator.press-flash::after {
+		animation: none !important;
+		background: var(--ink);
+	}
+	.stage-indicator.press-flash > span {
+		animation: none !important;
+		color: var(--background);
+	}
+	.stage-arrow.press-flash svg {
+		animation: none !important;
+		fill: var(--ink);
+	}
+	.world-switch.press-flash svg {
+		animation: none !important;
+		fill: var(--ink);
+	}
 	*,
 	*::before,
 	*::after {
@@ -890,6 +1087,15 @@ button:disabled {
 	.app {
 		touch-action: none;
 		overscroll-behavior: none;
+	}
+	.game-screen,
+	.game-screen *,
+	.stage-screen,
+	.stage-screen *,
+	.confirm-backdrop,
+	.confirm-backdrop * {
+		-webkit-touch-callout: none;
+		-webkit-tap-highlight-color: transparent;
 	}
 	.game-screen.menu-covered {
 		visibility: hidden;
@@ -912,18 +1118,18 @@ button:disabled {
 		font-size: 57px;
 	}
 	.placement-gauge {
-		left: 130px;
+		left: 80px;
 		top: 200px;
-		width: 820px;
+		width: 920px;
 	}
 	.play-row {
-		left: 130px;
+		left: 80px;
 		top: 230px;
-		width: 820px;
+		width: 920px;
 	}
 	.board-frame {
-		width: 820px;
-		height: 820px;
+		width: 920px;
+		height: 920px;
 	}
 	.stage-arrow {
 		top: -120px;
@@ -946,9 +1152,9 @@ button:disabled {
 	.touch-pad {
 		position: absolute;
 		left: 214px;
-		top: 1085px;
+		top: 1185px;
 		width: 652px;
-		height: 538px;
+		height: 490px;
 		display: block;
 		border: 6px solid var(--rim);
 		background: var(--background);
@@ -1022,7 +1228,7 @@ button:disabled {
 		50% { opacity: 1; transform: translate(18px, -50%); }
 	}
 	.controls {
-		top: 1658px;
+		top: 1700px;
 		gap: 38px;
 	}
 	.icon-button {

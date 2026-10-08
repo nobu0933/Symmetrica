@@ -5,7 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 		<meta name="theme-color" content="#3c3e59" />
 		<title>Symmetrica</title>
-		<link rel="stylesheet" href="style.css?v=20261007" />
+		<link rel="stylesheet" href="style.css?v=20261009-14" />
 		<script type="module" src="src/main.js"></script>
 	</head>
 	<body>
@@ -50,7 +50,7 @@
 					</button>
 				</div>
 				<div class="touch-pad" id="touch-pad" role="group" aria-label="図形を動かすエリア">
-					<canvas id="touch-pad-shape" width="652" height="538" aria-hidden="true"></canvas>
+					<canvas id="touch-pad-shape" width="652" height="490" aria-hidden="true"></canvas>
 					<span class="touch-knob" id="touch-knob" aria-hidden="true"></span>
 					<svg class="touch-hint-arrow left" viewBox="0 0 112 78" aria-hidden="true">
 						<path d="M8 39 48 7v18h56v28H48v18z" />
@@ -128,6 +128,7 @@
 									hidden /></span
 						></span>
 					</h1>
+					<div class="world-progress" id="world-progress" role="group" aria-label="面選択" hidden></div>
 					<button
 						class="world-switch previous-world"
 						id="world-previous"
@@ -135,10 +136,13 @@
 						aria-label="前の面へ"
 						hidden
 					>
-						◀
+						<svg viewBox="0 0 48 80" aria-hidden="true"><path d="M42 3 4 40l38 37z" /></svg>
 					</button>
+					<span class="world-switch world-switch-placeholder" id="world-next-placeholder" aria-hidden="true" hidden>
+						<svg viewBox="0 0 48 80"><path d="m6 3 38 37L6 77z" /></svg>
+					</span>
 					<button class="world-switch" id="world-next" type="button" aria-label="次の面へ" hidden>
-						▶
+						<svg viewBox="0 0 48 80" aria-hidden="true"><path d="m6 3 38 37L6 77z" /></svg>
 					</button>
 					<div class="stage-meta">
 						<button
@@ -236,7 +240,7 @@
 			</section>
 			<div class="confirm-backdrop" id="confirm-backdrop" hidden>
 				<div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-					<p id="confirm-title">Erase all stage progress? This cannot be undone.</p>
+					<p id="confirm-title">Erase all stage progress?<br />This cannot be undone.</p>
 					<div class="confirm-actions">
 						<button class="bevel" type="button" id="cancel-erase"><span>Cancel</span></button>
 						<button class="bevel" type="button" id="confirm-erase"><span>Erase</span></button>

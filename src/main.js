@@ -1,9 +1,12 @@
 import { DEFAULT_CLEAR_COLOR, DEFAULT_SUB_COLOR, DEFAULT_SYMBOL_COLOR, STAGES, STAGE_WORLDS } from './game/stages.js';
 import { ShapeDefs } from './game/shapes.js';
-import { clearStageCompletion, freshStageState, hasClearedOperation, isEveryStageComplete, isWorldComplete, isWorldUnlocked, normalizeProgressRecord, restoreStageState, shouldOpenStageSelectionAtStartup, shouldShowStageNumber, snapshotStageState, unlockedStageCount } from './game/progressState.js';
+import { clearStageCompletion, freshStageState, hasClearedOperation, isEveryStageComplete, isWorldComplete, isWorldUnlocked, normalizeProgressRecord, restoreStageState, shouldOpenStageSelectionAtStartup, shouldShowStageNumber, snapshotStageState, stageModeFromRecord, unlockedStageCount } from './game/progressState.js';
 import { createDeveloperScreen } from './ui/developerScreen.js';
 import { drawSymmetryElements } from './ui/symmetryRenderer.js';
-import { blindPlacementAlpha } from './ui/blindMode.js';
+import { blindPlacementAlpha, blindThumbnailAlpha } from './ui/blindMode.js';
+import { createTouchSnapDwell, sameVisualSnap } from './ui/touchSnapDwell.js';
+import { createButtonPressFeedback } from './ui/buttonFeedback.js';
+import { worldProgressStatus } from './ui/worldProgress.js';
 import { FINAL_ICON_HOP_MS, NEXT_WORLD_BUTTON_DELAY_MS, NEXT_WORLD_BUTTON_LANDING_MS, unlockStepDelay } from './ui/unlockAnimation.js';
 import { createSoundEffects } from './ui/soundEffects.js';
 import { PLACEMENT_FLASH_MS, placementFlashColor } from './ui/placementFeedback.js';
@@ -28,16 +31,30 @@ const grid = document.getElementById('stage-grid');
 const crown = document.getElementById('title-crown');
 const worldPrevious = document.getElementById('world-previous');
 const worldNext = document.getElementById('world-next');
+const worldNextPlaceholder = document.getElementById('world-next-placeholder');
+const worldProgress = document.getElementById('world-progress');
 const indicator = document.getElementById('stage-indicator');
 const gauge = document.getElementById('placement-gauge');
 const touchPad = document.getElementById('touch-pad');
 const touchPadShape = document.getElementById('touch-pad-shape');
 const touchKnob = document.getElementById('touch-knob');
 const controls = Object.fromEntries(['reset', 'undo', 'change', 'rotate', 'flip', 'previous', 'next'].map((id) => [id, document.getElementById(id)]));
+const flashControl = createButtonPressFeedback();
 const announcement = document.getElementById('announcement');
 const confirmBackdrop = document.getElementById('confirm-backdrop');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const mobileLayout = window.matchMedia('(hover: none) and (pointer: coarse) and (max-width: 950px)');
+function preventGameplaySelection(event) {
+  event.preventDefault();
+}
+function preventMobileLongPressMenu(event) {
+  if (mobileLayout.matches) event.preventDefault();
+}
+for (const surface of [gameScreen, screen, confirmBackdrop]) {
+  surface.addEventListener('selectstart', preventGameplaySelection);
+  surface.addEventListener('dragstart', preventGameplaySelection);
+  surface.addEventListener('contextmenu', preventMobileLongPressMenu);
+}
 const TOUCH_HINT_IDLE_MS = 3500;
 const sounds = createSoundEffects();
 sounds.preload('arrivals');
@@ -246,9 +263,10 @@ function updateControls() {
   board.classList.toggle('placing', state.mode === 'play' && !busy && !menuOpen);
   const initialCount = state.stage.doubleMode ? 2 : 1;
   const canEdit = state.mode === 'play' && state.placed.length >= initialCount && !busy;
+  const isP1 = state.stage.group === 'p1';
   controls.reset.hidden = introP1;
-  controls.undo.hidden = introP1;
-  controls.undo.disabled = introP1 || !canEdit || state.placed.length <= initialCount;
+  controls.undo.hidden = introP1 || isP1;
+  controls.undo.disabled = introP1 || isP1 || !canEdit || state.placed.length <= initialCount;
   controls.undo.classList.toggle('undo-correction', !controls.undo.hidden && !controls.undo.disabled &&
     state.placed.some((_, index) => index >= initialCount &&
       !isPlacementCorrect(state.placed, index, state.targets, state.stage)));
@@ -403,12 +421,13 @@ function animateBlindFade() {
   if (state.placed.some((_, index) => index > 0 && blindPlacementAlpha(state, index) > 0)) blindFrame = requestAnimationFrame(tick);
 }
 
-function drawScene(ctx, data, { symbols = true, preview = false, lattice = true, addedAlpha = 0, addedOffsets = null, flashes = null } = {}) {
+function drawScene(ctx, data, { symbols = true, preview = false, lattice = true, thumbnail = false,
+  addedAlpha = 0, addedOffsets = null, flashes = null } = {}) {
   if (lattice) ctx.drawImage(stageLayers(data.stage).grid, 0, 0);
   else drawGrid(ctx, data.stage.hex, false, data.stage.theme);
   const now = flashes?.size ? performance.now() : 0;
   data.placed.forEach((item, index) => {
-    const alpha = blindPlacementAlpha(data, index);
+    const alpha = thumbnail ? blindThumbnailAlpha(data, index) : blindPlacementAlpha(data, index);
     const flash = flashes?.get(index);
     const color = flash ? placementFlashColor(data.stage.theme?.clearColor || DEFAULT_CLEAR_COLOR,
       data.stage.theme?.foreground || '#f0f2f5', now - flash.started) : null;
@@ -451,8 +470,8 @@ function drawTouchPadShape() {
   ctx.clearRect(0, 0, touchPadShape.width, touchPadShape.height);
   ctx.save();
   ctx.translate(
-    326 + touchPadOffset.x * touchPadShape.width / touchPad.clientWidth,
-    240 + touchPadOffset.y * touchPadShape.height / touchPad.clientHeight,
+    touchPadShape.width / 2 + touchPadOffset.x * touchPadShape.width / touchPad.clientWidth,
+    touchPadShape.height / 2 - 29 + touchPadOffset.y * touchPadShape.height / touchPad.clientHeight,
   );
   ctx.scale(2.35, 2.35);
   drawShape(ctx, 0, 0, { ...cursor, shapeIndex }, state);
@@ -549,6 +568,7 @@ function placeCandidate(candidate) {
   if (result === 'limit') { flashLimit(); return; }
   if (result === 'stage-limit') { flashOverfilledGauge(); return; }
   if (result === 'duplicate') return;
+  touchSnapDwell.cancel();
   sounds.play('put');
   if (state.stage.blindMode && state.placed.length > 1) candidate.placedAt = Date.now();
   const initialCount = state.stage.doubleMode ? 2 : 1;
@@ -579,13 +599,23 @@ function place(event) {
   placeCandidate(getPreview());
 }
 
+const touchSnapDwell = createTouchSnapDwell(({ candidate, stageState, placedCount }) => {
+  if (!mobileLayout.matches || !mouse.visible || !state.targets.length || busy ||
+    menuOpen || state.mode !== 'play' || state !== stageState ||
+    state.placed.length !== placedCount) return;
+  const current = getPreview();
+  if (sameVisualSnap(current, candidate) &&
+    state.targets.some((target) => samePlacement(current, target, state.stage.hex))) {
+    placeCandidate(current);
+  }
+});
+
 function maybeAutoPlaceTouch() {
   if (!mobileLayout.matches || !mouse.visible || !state.targets.length || busy ||
-    menuOpen || state.mode !== 'play') return;
+    menuOpen || state.mode !== 'play') { touchSnapDwell.cancel(); return; }
   const candidate = getPreview();
-  if (state.targets.some((target) => samePlacement(candidate, target, state.stage.hex))) {
-    placeCandidate(candidate);
-  }
+  const snapped = state.targets.some((target) => samePlacement(candidate, target, state.stage.hex));
+  touchSnapDwell.observe(snapped ? candidate : null, state, state.placed.length);
 }
 
 function hideTouchGuidance() {
@@ -606,7 +636,8 @@ function scheduleTouchGuidance(immediate = false) {
   }, TOUCH_HINT_IDLE_MS);
 }
 
-function releaseTouchGesture() {
+function releaseTouchGesture(preserveSnap = false) {
+  if (!preserveSnap) touchSnapDwell.cancel();
   touchGesture = null;
   touchPadOffset = { x: 0, y: 0 };
   touchPad.classList.remove('active');
@@ -638,6 +669,8 @@ function moveTouchGesture(event) {
 
 function resetStage() {
   if (busy || state.firstAttempt) return;
+  flashControl(controls.reset);
+  touchSnapDwell.cancel();
   sounds.play('switch');
   clearPlacementFlashes();
   frame.classList.remove('cleared');
@@ -655,6 +688,8 @@ function resetStage() {
 
 function undo() {
   if (busy || controls.undo.disabled) return;
+  flashControl(controls.undo);
+  touchSnapDwell.cancel();
   sounds.play('switch');
   clearPlacementFlashes();
   state.placed.pop();
@@ -665,6 +700,7 @@ function undo() {
 
 function rotate() {
   if (busy || controls.rotate.disabled) return;
+  flashControl(controls.rotate);
   sounds.play('switch');
   const cursor = state.stage.doubleMode ? state.cursors[state.activeShape] : state.cursor;
   cursor.angle = (cursor.angle + (state.stage.hex ? 60 : 90)) % 360;
@@ -678,6 +714,7 @@ function rotate() {
 
 function flip() {
   if (busy || controls.flip.disabled) return;
+  flashControl(controls.flip);
   sounds.play('switch');
   if (state.stage.doubleMode) state.cursors[state.activeShape] = reflectCursorVertically(state.cursors[state.activeShape]);
   else state.cursor = reflectCursorVertically(state.cursor);
@@ -691,6 +728,7 @@ function flip() {
 
 function changeShape() {
   if (busy || controls.change.disabled) return;
+  flashControl(controls.change);
   sounds.play('switch');
   state.activeShape = 1 - state.activeShape;
   usedOperations.add('change');
@@ -718,18 +756,52 @@ function updateMenu() {
     thumbnail.width = 300; thumbnail.height = 300;
     const ctx = thumbnail.getContext('2d');
     ctx.scale(.5, .5);
-    drawScene(ctx, { stage: STAGES[index], ...record }, { symbols: false, lattice: false });
+    drawScene(ctx, { stage: STAGES[index], ...record, mode: stageModeFromRecord(record) },
+      { symbols: false, lattice: false, thumbnail: true });
     tile.append(thumbnail);
   }
   updateWorldSwitch();
 }
 
 function updateWorldSwitch() {
-  const unlockedNext = menuWorldIndex + 1 < STAGE_WORLDS.length &&
-    isWorldUnlocked(STAGES, records, menuWorldIndex + 1);
+  const status = worldProgressStatus(STAGE_WORLDS, STAGES, records, seenUnlocks, menuWorldIndex,
+    { finalSeen: seenFinalCelebration === finalCelebrationSignature() });
   worldPrevious.hidden = menuWorldIndex === 0;
-  worldNext.hidden = !unlockedNext || !seenUnlocks.has(STAGE_WORLDS[menuWorldIndex + 1]?.id);
+  worldNext.hidden = !status.nextButtonVisible;
+  worldNextPlaceholder.hidden = !status.placeholderVisible;
   worldNext.style.setProperty('--clear-color', STAGE_WORLDS[menuWorldIndex].theme.clearColor || DEFAULT_CLEAR_COLOR);
+  updateWorldProgress(status);
+}
+
+function updateWorldProgress(status) {
+  const count = status.dots.length;
+  const hitSize = Math.max(8, Math.min(40, Math.floor(880 / Math.max(1, count))));
+  const dotSize = Math.min(10, Math.max(4, hitSize - 6));
+  worldProgress.style.setProperty('--dot-size', `${dotSize}px`);
+  worldProgress.style.setProperty('--active-dot-size', `${Math.min(hitSize - 2, dotSize + 5)}px`);
+  worldProgress.style.setProperty('--dot-hit-size', `${hitSize}px`);
+  if (worldProgress.children.length !== status.dots.length) {
+    worldProgress.replaceChildren(...status.dots.map((_, index) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'world-progress-dot';
+      dot.addEventListener('click', () => {
+        if (index !== menuWorldIndex) changeMenuWorld(index - menuWorldIndex);
+      });
+      return dot;
+    }));
+  }
+  [...worldProgress.children].forEach((dot, index) => {
+    dot.style.setProperty('--dot-arrival-delay', `${Math.round(index * Math.min(50, 150 / Math.max(1, count - 1)))}ms`);
+    dot.classList.toggle('current', status.dots[index].current);
+    dot.classList.toggle('locked', !status.dots[index].unlocked);
+    dot.disabled = !status.dots[index].unlocked;
+    dot.setAttribute('aria-label', `第${index + 1}面${dot.disabled ? '（未解放）' : 'へ'}`);
+    if (status.dots[index].current) dot.setAttribute('aria-current', 'page');
+    else dot.removeAttribute('aria-current');
+  });
+  worldProgress.hidden = !status.visible;
+  worldProgress.setAttribute('aria-label', `面 ${menuWorldIndex + 1} / ${status.dots.length}`);
 }
 
 async function animateWorldUnlock() {
@@ -750,14 +822,22 @@ async function animateWorldUnlock() {
     tile.classList.add('unlock-highlight', last ? 'unlock-finale' : 'unlock-hop');
   }
   if (!reducedMotion.matches) await pause(nextWorld ? NEXT_WORLD_BUTTON_DELAY_MS : FINAL_ICON_HOP_MS);
+  const dotsWereHidden = worldProgress.hidden;
+  updateWorldProgress(worldProgressStatus(STAGE_WORLDS, STAGES, records, seenUnlocks, menuWorldIndex, {
+    revealWorldIndex: nextWorld ? menuWorldIndex + 1 : -1,
+    forceVisible: true,
+  }));
+  if (dotsWereHidden && !reducedMotion.matches) worldProgress.classList.add('unlock-entering');
   if (nextWorld) {
     worldNext.hidden = false;
     worldNext.classList.add('unlock-green', 'unlock-entering');
     if (!reducedMotion.matches) await pause(NEXT_WORLD_BUTTON_LANDING_MS);
+    worldNextPlaceholder.hidden = true;
     sounds.play('nextWorld');
   }
   await pause(reducedMotion.matches ? 10 : nextWorld ? 650 - NEXT_WORLD_BUTTON_LANDING_MS : 650);
   worldNext.classList.remove('unlock-entering');
+  worldProgress.classList.remove('unlock-entering');
   if (nextWorld) {
     seenUnlocks.add(nextWorld.id);
     try { localStorage.setItem(UNLOCK_SEEN_KEY, JSON.stringify([...seenUnlocks])); } catch { /* The unlock still works this session. */ }
@@ -773,6 +853,7 @@ async function animateWorldUnlock() {
 
 async function openMenu() {
   if (busy || menuOpen) return;
+  flashControl(indicator);
   sounds.play('switch');
   busy = true;
   cancelAnimationFrame(previewDrawFrame);
@@ -784,7 +865,7 @@ async function openMenu() {
   draw();
   saveCurrentState();
   updateControls();
-  await Promise.all([...placementFlashes.values()].map((flash) => flash.promise));
+  await Promise.all([...placementFlashes.values()].map((flash) => flash.promise).concat(pause(140)));
   await transferBoardToMenu();
 }
 
@@ -1084,8 +1165,10 @@ async function changeMenuWorld(delta) {
   const nextIndex = menuWorldIndex + delta;
   if (busy || nextIndex < 0 || nextIndex >= STAGE_WORLDS.length ||
     !isWorldUnlocked(STAGES, records, nextIndex)) return;
+  flashControl(delta < 0 ? worldPrevious : worldNext);
   sounds.play('switch');
   busy = true;
+  await pause(reducedMotion.matches ? 10 : 140);
   screen.classList.add('world-exiting');
   await pause(reducedMotion.matches ? 10 : 360);
   screen.classList.remove('world-exiting');
@@ -1183,6 +1266,7 @@ board.addEventListener('contextmenu', (event) => event.preventDefault());
 touchPad.addEventListener('pointerdown', (event) => {
   if (!mobileLayout.matches || touchGesture || busy || menuOpen || state.mode !== 'play') return;
   event.preventDefault();
+  touchSnapDwell.cancel();
   hideTouchGuidance();
   touchPad.setPointerCapture(event.pointerId);
   touchGesture = {
@@ -1206,7 +1290,7 @@ touchPad.addEventListener('pointerup', (event) => {
   if (startedWithoutTargets && !busy && !menuOpen && state.mode === 'play') {
     placeCandidate(getPreview());
   }
-  releaseTouchGesture();
+  releaseTouchGesture(true);
   scheduleTouchGuidance();
 });
 touchPad.addEventListener('pointercancel', (event) => {
@@ -1241,11 +1325,13 @@ bindControlAction(controls.rotate, rotate);
 bindControlAction(controls.flip, flip);
 controls.previous.addEventListener('click', () => {
   if (busy || controls.previous.disabled) return;
+  flashControl(controls.previous);
   sounds.play('switch');
   startStage(stageIndex - 1);
 });
 controls.next.addEventListener('click', () => {
   if (busy || controls.next.disabled) return;
+  flashControl(controls.next);
   sounds.play('switch');
   startStage(stageIndex + 1);
 });

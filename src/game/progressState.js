@@ -80,7 +80,7 @@ export function restoreStageState(stage, record) {
   const placed = record.placed.map((item) => ({ ...item }));
   return {
     stage,
-    mode: record.completed && !record.editing ? 'view' : 'play',
+    mode: stageModeFromRecord(record),
     completed: record.completed,
     clearSymbolsVisible: record.clearSymbolsVisible === true,
     firstAttempt: record.firstAttempt === true,
@@ -98,6 +98,10 @@ export function restoreStageState(stage, record) {
     cursor: { ...record.cursor },
     completedAt: record.completedAt,
   };
+}
+
+export function stageModeFromRecord(record) {
+  return record?.completed && !record.editing ? 'view' : 'play';
 }
 
 export function snapshotStageState(state) {
