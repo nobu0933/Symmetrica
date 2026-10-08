@@ -595,8 +595,8 @@ export const STAGE_WORLDS = [
 			},
 			{
 				group: 'p31m',
-				symbols: [12, 13],
-				clearSymbols: [5, 6],
+				symbols: [11, 12],
+				clearSymbols: [5, 6, 7, 8, 9, 10],
 				initialAngles: [0, 60, 120, 180, 240, 300],
 				sizeMin: 0.4,
 				sizeMax: 0.5,

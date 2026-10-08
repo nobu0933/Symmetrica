@@ -27,9 +27,10 @@ test('each gameplay cue uses its assigned sound and permits overlapping playback
   effects.play('clear');
   effects.play('arrivals');
   effects.play('unlock');
+  effects.play('nextWorld');
   effects.play('unknown');
 
-  assert.equal(instances.length, 9);
+  assert.equal(instances.length, 10);
   assert.equal(instances.filter((audio) => audio.src.endsWith('/switch6.mp3') && audio.plays).length, 2);
   assert.equal(instances.filter((audio) => audio.src.endsWith('/put5.mp3') && audio.plays).length, 1);
   assert.equal(instances.filter((audio) => audio.src.endsWith('/put2.mp3') && audio.plays).length, 1);
@@ -37,7 +38,8 @@ test('each gameplay cue uses its assigned sound and permits overlapping playback
   assert.equal(instances.filter((audio) => audio.src.endsWith('/error.mp3') && audio.plays).length, 1);
   assert.equal(instances.filter((audio) => audio.src.endsWith('/clear.mp3') && audio.plays).length, 1);
   assert.equal(instances.filter((audio) => audio.src.endsWith('/put5-arrivals.wav') && audio.plays && audio.volume === 0.6).length, 1);
-  assert.equal(instances.filter((audio) => audio.src.endsWith('/put5-unlock.wav') && audio.plays).length, 1);
+  assert.equal(instances.filter((audio) => audio.src.endsWith('/pon-unlock.wav') && audio.plays).length, 1);
+  assert.equal(instances.filter((audio) => audio.src.endsWith('/pon-next-world.wav') && audio.plays).length, 1);
 });
 
 test('audio playback failure does not interrupt gameplay', async () => {

@@ -5,33 +5,40 @@ import { FINAL_ICON_LANDING_MS, unlockStepDelay } from '../src/ui/unlockAnimatio
 // One-off build helper: pass the path to an installed Playwright package.
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.argv[2]);
-const source = await readFile(new URL('../sounds/put5.mp3', import.meta.url));
-const encoded = source.toString('base64');
-
 const arrivals = Array.from({ length: 9 }, (_, diagonal) => 340 + diagonal * 50);
 let iconStart = 0;
 const unlock = Array.from({ length: 17 }, (_, index) => {
   if (index > 0) iconStart += unlockStepDelay(index, 17);
-  return iconStart + (index === 16 ? FINAL_ICON_LANDING_MS : 440);
+  return iconStart + (index === 16 ? FINAL_ICON_LANDING_MS : 0);
 });
+const ponSemitonesPerHit = 0.75;
+const finalPonSemitones = (unlock.length - 1) * ponSemitonesPerHit;
+const tracks = [
+  { output: 'put5-arrivals.wav', source: 'put5.mp3', starts: arrivals, semitonesPerHit: 0, baseSemitones: 0 },
+  { output: 'pon-unlock.wav', source: 'pon.mp3', starts: unlock, semitonesPerHit: ponSemitonesPerHit, baseSemitones: 0 },
+  { output: 'pon-next-world.wav', source: 'pon.mp3', starts: [0], semitonesPerHit: 0, baseSemitones: finalPonSemitones },
+];
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const page = await browser.newPage();
-  for (const [name, starts] of [['arrivals', arrivals], ['unlock', unlock]]) {
-    const base64 = await page.evaluate(async ({ encoded, starts }) => {
+  for (const { output, source, starts, semitonesPerHit, baseSemitones } of tracks) {
+    const encoded = (await readFile(new URL(`../sounds/${source}`, import.meta.url))).toString('base64');
+    const base64 = await page.evaluate(async ({ encoded, starts, semitonesPerHit, baseSemitones, source }) => {
       const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
       const context = new AudioContext();
       const sample = await context.decodeAudioData(bytes.buffer);
       await context.close();
       const sampleRate = 44100;
-      const duration = Math.max(...starts) / 1000 + sample.duration + 0.03;
+      const duration = Math.max(...starts.map((start, index) =>
+        start / 1000 + sample.duration / 2 ** ((baseSemitones + index * semitonesPerHit) / 12))) + 0.03;
       const offline = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
-      for (const start of starts) {
+      for (const [index, start] of starts.entries()) {
         const voice = offline.createBufferSource();
         voice.buffer = sample;
+        voice.playbackRate.value = 2 ** ((baseSemitones + index * semitonesPerHit) / 12);
         const gain = offline.createGain();
-        gain.gain.value = 0.7;
+        gain.gain.value = source === 'pon.mp3' ? 0.85 : 0.7;
         voice.connect(gain).connect(offline.destination);
         voice.start(start / 1000);
       }
@@ -56,8 +63,8 @@ try {
         binary += String.fromCharCode(...output.subarray(offset, offset + 8192));
       }
       return btoa(binary);
-    }, { encoded, starts });
-    await writeFile(new URL(`../sounds/put5-${name}.wav`, import.meta.url), Buffer.from(base64, 'base64'));
+    }, { encoded, starts, semitonesPerHit, baseSemitones, source });
+    await writeFile(new URL(`../sounds/${output}`, import.meta.url), Buffer.from(base64, 'base64'));
   }
 } finally {
   await browser.close();

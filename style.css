@@ -15,6 +15,7 @@
 	--font-display: Bahnschrift, 'Century Gothic', 'Segoe UI Light', 'Helvetica Neue', sans-serif;
 	--font-body: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
 	--screen-scale: 1;
+	--game-scale: 1;
 }
 * {
 	box-sizing: border-box;
@@ -282,10 +283,14 @@ button:disabled {
 #board.placing {
 	cursor: none;
 }
+.touch-pad {
+	display: none;
+}
 .stage-arrow {
 	border: 0;
 	background: transparent;
 	color: var(--rim);
+	-webkit-tap-highlight-color: transparent;
 	padding: 6px 0;
 	display: flex;
 	align-items: center;
@@ -310,6 +315,13 @@ button:disabled {
 .stage-arrow:not(:disabled):hover {
 	color: var(--ink);
 	transform: scale(1.08);
+}
+.stage-arrow:not(:disabled):active {
+	color: var(--ink);
+}
+.stage-arrow:focus-visible {
+	outline: none;
+	color: var(--selection);
 }
 .controls {
 	position: absolute;
@@ -442,6 +454,7 @@ button:disabled {
 	padding: 0;
 	background: transparent;
 	color: var(--rim);
+	-webkit-tap-highlight-color: transparent;
 	font: 400 70px/1 var(--font-display);
 	transition:
 		color 0.3s ease-out,
@@ -453,6 +466,13 @@ button:disabled {
 .world-switch:hover {
 	color: var(--ink);
 	transform: scale(1.12);
+}
+.world-switch:active {
+	color: var(--ink);
+}
+.world-switch:focus-visible {
+	outline: none;
+	color: var(--selection);
 }
 .world-switch.unlock-green,
 .world-switch.unlock-green:hover {
@@ -858,5 +878,142 @@ button:disabled {
 	*::after {
 		animation-duration: 0.01ms !important;
 		transition-duration: 0.01ms !important;
+	}
+}
+
+/* The portrait play surface is opt-in for touch-first, phone-sized screens.
+   A narrow desktop window keeps the original square layout. */
+@media (hover: none) and (pointer: coarse) and (max-width: 950px) {
+	.game-screen.menu-covered {
+		visibility: hidden;
+	}
+	.game-screen {
+		width: 1080px;
+		height: 1920px;
+		transform: translate(-50%, -50%) scale(var(--game-scale));
+	}
+	.stage-indicator {
+		top: 122px;
+		right: 83px;
+		width: 258px;
+		height: 70px;
+		font-size: 62px;
+	}
+	.stage-indicator.multi-world {
+		width: 290px;
+		font-size: 57px;
+	}
+	.placement-gauge {
+		left: 143px;
+		top: 222px;
+		width: 786px;
+	}
+	.play-row {
+		left: 44px;
+		top: 251px;
+		width: 984px;
+		grid-template-columns: 78px 786px 78px;
+		gap: 21px;
+	}
+	.board-frame {
+		width: 786px;
+		height: 786px;
+	}
+	.stage-arrow svg {
+		width: 60px;
+		height: 104px;
+	}
+	#board {
+		pointer-events: none;
+	}
+	.touch-pad {
+		position: absolute;
+		left: 214px;
+		top: 1085px;
+		width: 652px;
+		height: 538px;
+		display: block;
+		border: 6px solid var(--rim);
+		background: var(--background);
+		touch-action: none;
+		user-select: none;
+	}
+	#touch-pad-shape {
+		display: block;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+	}
+	.touch-knob {
+		position: absolute;
+		left: 50%;
+		top: 40%;
+		width: 80px;
+		height: 80px;
+		border: 6px solid var(--rim-dark);
+		border-radius: 50%;
+		background: var(--rim);
+		transform: translate(calc(-50% + var(--knob-x, 0px)), calc(-50% + var(--knob-y, 0px)));
+		pointer-events: none;
+		visibility: hidden;
+	}
+	.touch-pad.guidance-visible:not(.active) .touch-knob {
+		visibility: visible;
+		animation: touch-knob-pulse 2.2s ease-in-out infinite;
+	}
+	.touch-hint-arrow {
+		position: absolute;
+		top: 50%;
+		width: 112px;
+		height: 78px;
+		fill: var(--rim);
+		stroke: var(--rim-dark);
+		stroke-width: 8px;
+		stroke-linejoin: round;
+		visibility: hidden;
+		pointer-events: none;
+	}
+	.touch-hint-arrow.left {
+		left: calc(50% - 185px);
+		top: 40%;
+		transform: translateY(-50%);
+	}
+	.touch-hint-arrow.right {
+		left: calc(50% + 73px);
+		top: 40%;
+		transform: translateY(-50%);
+	}
+	.touch-pad.guidance-visible:not(.active) .touch-hint-arrow {
+		visibility: visible;
+	}
+	.touch-pad.guidance-visible:not(.active) .touch-hint-arrow.left {
+		animation: touch-hint-left 2.2s ease-in-out infinite;
+	}
+	.touch-pad.guidance-visible:not(.active) .touch-hint-arrow.right {
+		animation: touch-hint-right 2.2s ease-in-out infinite;
+	}
+	@keyframes touch-knob-pulse {
+		0%, 100% { opacity: .55; }
+		50% { opacity: 1; }
+	}
+	@keyframes touch-hint-left {
+		0%, 100% { opacity: .55; transform: translate(0, -50%); }
+		50% { opacity: 1; transform: translate(-18px, -50%); }
+	}
+	@keyframes touch-hint-right {
+		0%, 100% { opacity: .55; transform: translate(0, -50%); }
+		50% { opacity: 1; transform: translate(18px, -50%); }
+	}
+	.controls {
+		top: 1658px;
+		gap: 38px;
+	}
+	.icon-button {
+		width: 142px;
+		height: 142px;
+		padding: 27px;
+	}
+	.icon-button.bevel {
+		--cut: 21px;
 	}
 }

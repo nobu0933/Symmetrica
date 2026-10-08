@@ -6,7 +6,8 @@ const SOURCES = Object.freeze({
   error: new URL('../../sounds/error.mp3', import.meta.url).href,
   clear: new URL('../../sounds/clear.mp3', import.meta.url).href,
   arrivals: new URL('../../sounds/put5-arrivals.wav', import.meta.url).href,
-  unlock: new URL('../../sounds/put5-unlock.wav', import.meta.url).href,
+  unlock: new URL('../../sounds/pon-unlock.wav', import.meta.url).href,
+  nextWorld: new URL('../../sounds/pon-next-world.wav', import.meta.url).href,
 });
 
 export function createSoundEffects(AudioConstructor = globalThis.Audio) {
